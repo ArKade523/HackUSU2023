@@ -1,0 +1,73 @@
+#include <nds.h>
+#include <stdio.h>
+
+volatile int frame = 0;
+
+//---------------------------------------------------------------------------------
+void Vblank() {
+//---------------------------------------------------------------------------------
+	frame++;
+}
+	
+//---------------------------------------------------------------------------------
+int main(void) {
+//---------------------------------------------------------------------------------
+	touchPosition touchXY;
+
+	irqSet(IRQ_VBLANK, Vblank);
+
+	// Set up the video mode and backgrounds
+	videoSetMode(MODE_0_2D);
+	videoSetModeSub(MODE_0_2D);
+
+
+	// Set up the consoles for each screen
+	PrintConsole topScreenConsole;
+	PrintConsole bottomScreenConsole;
+
+	/* Initialize the text console for the top screen
+	 * 3: layer id
+	 * BgType_Text4bpp: background type
+	 * BgSize_T_256x256: background size
+	 * 31: background map base
+	 * 0: background tile graphics base
+	 * true: use main engine
+	 * true: default font graphics loaded into layer
+	   (this option allows you to write text to the display)
+	*/
+	consoleInit(&topScreenConsole, 3, BgType_Text4bpp, BgSize_T_256x256, 31, 0, true, true);
+	consoleInit(&bottomScreenConsole, 3, BgType_Text4bpp, BgSize_T_256x256, 31, 2, false, true);
+	
+	// Set up the top screen graphics background
+	int bgTopGraphics = bgInit(0, BgType_Bmp16, BgSize_B16_256x256, 0, 0);
+	// Clear the graphics background with a solid color
+	// bgSetFillColor(bgTopGraphics, RGB15(31, 31, 31));
+	// bgFill(bgTopGraphics);
+
+	// Switch to the top screen console
+	consoleSelect(&topScreenConsole);
+	iprintf("HackUSU 2023 - NDS Game Demo (Top Screen)\n");
+ 
+
+
+	// Switch to the bottom screen console
+	consoleSelect(&bottomScreenConsole);
+	iprintf("HackUSU 2023 - NDS Game Demo (Bottom Screen)\n");
+
+	while(1) {
+		swiWaitForVBlank();
+		scanKeys();
+		int keys = keysDown();
+		if (keys & KEY_START) break;
+
+		touchRead(&touchXY);
+
+		// print at using ansi escape sequence \x1b[line;columnH 
+		iprintf("\x1b[10;0HFrame = %d",frame);
+		iprintf("\x1b[16;0HTouch x = %04X, %04X\n", touchXY.rawx, touchXY.px);
+		iprintf("Touch y = %04X, %04X\n", touchXY.rawy, touchXY.py);
+	
+	}
+
+	return 0;
+}
